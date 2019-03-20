@@ -1,0 +1,49 @@
+//
+//  Intel Edison (WiFi).xcconfig
+//  Board config file
+//  ----------------------------------
+//  Developed with embedXcode
+//
+//  Part of embedXcode
+//  Embedded Computing on Xcode
+//
+//  Created by 	Rei Vilo on 01 Jul 2014
+//  Copyright   (c) 2010-2019 https://embedXcode.weebly.com
+//  Licence		All rights reserved
+//
+// Last update: 22 Apr 2016 release 4.5.0
+// izmir_ec_ssh
+
+// Board identifier
+// See Boards.txt for <tag>.name=Arduino Uno (16 MHz)
+//
+BOARD_TAG  = izmir_ec
+
+// Port (optional)
+// most common are /dev/tty.usbserial*, /dev/tty.usbmodem* or /dev/tty.uart*
+//
+BOARD_PORT = ssh
+
+// References for Xcode code-sense
+// See Boards.txt for <tag>.build.mcu=<GCC_PREPROCESSOR_DEFINITIONS>
+//
+GCC_PREPROCESSOR_DEFINITIONS = i686 ARDUINO EDISON_IDE
+
+// Specify the full path and name of the application
+// with /Contents/Java/** after
+//
+HEADER_SEARCH_PATHS = $HOME/Library/Arduino15/packages/Intel/hardware/i686/**
+
+// Maximum RAM size in bytes
+// given by <tag>.upload.maximum_ram_size in boards.txt for Maple and Teensy
+// given by <tag>.upload.maximum_data_size in boards.txt for Arduino 1.5.x
+//
+MAX_FLASH_SIZE = 10000000
+MAX_RAM_SIZE = 10000000
+
+// Edison SSH password and address
+//
+
+WARNING_MESSAGE = $(CONFIG_NAME) no longer supported by Intel
+
+CONFIG_NAME = Intel Edison (WiFi)

@@ -1,0 +1,47 @@
+//
+//  Microduino Core USB with ATmega32U4-5V.xcconfig
+//  Board configuration file
+//  ----------------------------------
+//  Developed with embedXcode
+//
+//  Part of embedXcode
+//  Embedded Computing on Xcode
+//
+//  Created by  Rei Vilo on 04 Jan 2014
+//  Copyright   (c) 2010-2019 https://embedXcode.weebly.com
+//  Licence     All rights reserved
+//
+// Last update: 11 May 2015 release 2.8.8
+
+// Board identifier
+// See Boards.txt for <tag>.name=Arduino Uno (16 MHz)
+//
+BOARD_TAG  = 32u416m
+
+// For Arduino 1.5.x, if different from Arduino 1.0.x
+//
+//BOARD_TAG1 = 32u416m
+//BOARD_TAG2 = 32u416m
+
+// Port (optional)
+// most common are /dev/tty.usbserial*, /dev/tty.usbmodem* or /dev/tty.uart*
+//
+BOARD_PORT = /dev/tty.usbmodem*
+
+// References for Xcode code-sense
+// See Boards.txt for <tag>.build.mcu=<GCC_PREPROCESSOR_DEFINITIONS>
+//
+GCC_PREPROCESSOR_DEFINITIONS = __AVR_ATmega32U4__ MICRODUINO
+
+// Specify the full path and name of the application
+// with /Contents/Java/** after
+//
+APPLICATIONS_PATH = /Applications
+HEADER_SEARCH_PATHS = $(APPLICATIONS_PATH)/Microduino.app/Contents/Java/hardware/Microduino/avr/**
+
+// Maximum RAM size in bytes
+// given by <tag>.upload.maximum_ram_size in boards.txt for Maple and Teensy
+//
+MAX_RAM_SIZE = 2048
+
+CONFIG_NAME = Microduino Core USB ATmega328U4-5V

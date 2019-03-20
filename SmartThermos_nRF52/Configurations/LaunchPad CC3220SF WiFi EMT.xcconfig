@@ -1,0 +1,47 @@
+//
+//  LaunchPad CC3220SF WiFi EMT.xcconfig
+//  Board config file
+//  ----------------------------------
+//  Developed with embedXcode
+//
+//  Part of embedXcode
+//  Embedded Computing on Xcode
+//
+//  Created by  Rei Vilo on 16 Dec 2017
+//  Copyright   (c) 2010-2019 https://embedXcode.weebly.com
+//  Licence		All rights reserved
+//
+// Last update: 25 Sep 2018 release 10.0.6
+
+// Board identifier
+// See Boards.txt for <tag>.name=Arduino Uno (16 MHz)
+//
+BOARD_TAG       = 0
+BOARD_TAG_18    = CC3220SF-LAUNCHXL
+
+// Port (optional)
+// most common are /dev/tty.usbserial*, /dev/tty.usbmodem* or /dev/tty.uart*
+//
+BOARD_PORT = /dev/cu.usbmodem*
+
+// References for Xcode code-sense
+// See Boards.txt for <tag>.build.mcu=<GCC_PREPROCESSOR_DEFINITIONS>
+//
+GCC_PREPROCESSOR_DEFINITIONS = __CC3220__ ENERGIA ENERGIA_MT
+
+// Specify the full path and name of the application
+// with /Contents/Java/** after
+//
+HEADER_SEARCH_PATHS = $HOME/Library/Energia15/packages/energia/hardware/cc3220emt/**
+
+// Maximum RAM size in bytes
+// given by <tag>.upload.maximum_ram_size in boards.txt for Maple and Teensy
+// given by <tag>.upload.maximum_data_size in boards.txt for Arduino 1.5.x
+//
+MAX_RAM_SIZE = 262144
+
+MULTI_INO    = 1
+
+//POST_RESET_MESSAGE = 1
+
+CONFIG_NAME = LaunchPad CC3220SF WiFi EMT

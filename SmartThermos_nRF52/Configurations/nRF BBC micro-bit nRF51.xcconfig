@@ -1,0 +1,48 @@
+//
+//  nRF BBC micro-bit nRF51.xcconfig
+//  Board config file
+//  ----------------------------------
+//  Developed with embedXcode
+//
+//  Project 	e-1050-BBC-micro
+//
+//  Created by 	Rei Vilo on 04 Feb 2019
+//  Copyright 	(c) 2019 embedXcode
+//  Licence     All rights reserved
+//
+// Last update: 20 Feb 2019 release 10.5.7
+
+// Board parameters
+// Help: http://bit.ly/2AdMdQ4
+
+// Board identifier
+// See Boards.txt for <tag>.name=Arduino Uno (16 MHz)
+//
+BOARD_TAG  = BBCmicrobit
+BOARD_TAG1 = BBCmicrobit.menu.softdevice.s110
+
+// Port (optionnal)
+// most common are /dev/tty.usbserial*, /dev/tty.usbmodem* or /dev/tty.uart*
+//
+BOARD_PORT = /dev/tty.usbmodem14*
+
+// References for Xcode code-sense
+// See Boards.txt for <tag>.build.mcu=<GCC_PREPROCESSOR_DEFINITIONS>
+//
+GCC_PREPROCESSOR_DEFINITIONS = __NRF51__ BBC_MICROBIT ARDUINO
+
+// Specify the full path and name of the application
+// with /Contents/Resources/Java/** after
+//
+HEADER_SEARCH_PATHS = $HOME/Library/Arduino15/packages/sandeepmistry/hardware/nRF5/**
+
+// Maximum RAM size in bytes
+// given by <tag>.upload.maximum_ram_size in boards.txt for Maple and Teensy
+// given by <tag>.upload.maximum_data_size in boards.txt for Arduino 1.5.x
+//
+MAX_RAM_SIZE = 16384
+
+// Programmer parameters
+// Help: http://bit.ly/2iedCuB
+
+CONFIG_NAME = nFR BBC micro-bit nRF51
