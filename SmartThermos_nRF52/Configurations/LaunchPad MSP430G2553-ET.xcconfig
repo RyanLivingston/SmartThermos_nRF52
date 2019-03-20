@@ -32,7 +32,7 @@ GCC_PREPROCESSOR_DEFINITIONS = __MSP430G2553__ ENERGIA
 // Specify the full path and name of the application
 // with /Contents/Java/** after
 //
-APPLICATIONS_PATH = /Applications/IDE
+APPLICATIONS_PATH = /Applications
 HEADER_SEARCH_PATHS = $(APPLICATIONS_PATH)/Energia.app/Contents/Java/hardware/energia/msp430/** $HOME/Library/Energia15/packages/energia/hardware/msp430/**
 
 // Maximum RAM size in bytes

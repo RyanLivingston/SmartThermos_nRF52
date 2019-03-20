@@ -73,37 +73,89 @@
 #error Platform not defined
 #endif // end IDE
 
-// Set parameters
+#include <bluefruit.h>
+#include "ThermosService.h"
 
-
-// Include application, user and local libraries
-// !!! Help http://bit.ly/2CL22Qp
-
-
-// Define structures and classes
-
-
-// Define variables and constants
-
+// Macros
+#define INIT_SET_TEMP_VALUE     125
+#define INIT_OP_STATE_VALUE     0
 
 // Prototypes
-// !!! Help: http://bit.ly/2l0ZhTa
+void set_temp_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset);
+void op_state_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset);
+void connect_callback(uint16_t conn_handle);
+void disconnect_callback(uint16_t conn_handle, uint8_t reason);
+void startAdv(void);
+
+// Global Variables
+ThermosService bleThermos;
+int setTemp;
+bool opState;
 
 
-// Utilities
-
-
-// Functions
-
-
-// Add setup code
-void setup()
-{
-
+void setup() {
+    
+    Serial.begin(115200);
+    
+    Bluefruit.autoConnLed(true);
+    Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
+    Bluefruit.begin();
+    
+    Bluefruit.setTxPower(4);
+    Bluefruit.setName("Smart Thermos");
+    
+    Bluefruit.setConnectCallback(connect_callback);
+    Bluefruit.setDisconnectCallback(disconnect_callback);
+    
+    bleThermos.setWriteCallback(OP_STATE, op_state_write_callback);
+    bleThermos.setWriteCallback(SET_TEMP, set_temp_write_callback);
+    bleThermos.begin();
+    
+    startAdv();
+    
 }
 
-// Add loop code
-void loop()
-{
+void loop() {
+    
+    
+    
+    
+}
 
+void set_temp_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset) {
+    setTemp = int(*data);
+    
+    Serial.print("Set Temp: ");
+    Serial.println(setTemp);
+}
+
+void op_state_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset) {
+    opState = int(*data);
+    
+    Serial.print("Operational State: ");
+    Serial.println(opState);
+}
+
+void connect_callback(uint16_t conn_handle) {
+    Serial.println("Connected");
+}
+
+void disconnect_callback(uint16_t conn_handle, uint8_t reason)
+{
+    (void) conn_handle;
+    (void) reason;
+    
+    Serial.println();
+    Serial.println("Disconnected");
+}
+
+void startAdv(void)
+{
+    Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
+    Bluefruit.Advertising.addTxPower();
+    Bluefruit.Advertising.addService(bleThermos);
+    Bluefruit.Advertising.restartOnDisconnect(true);
+    Bluefruit.Advertising.setInterval(32, 244);    // in unit of 0.625 ms
+    Bluefruit.Advertising.setFastTimeout(30);      // number of seconds in fast mode
+    Bluefruit.Advertising.start(0);
 }

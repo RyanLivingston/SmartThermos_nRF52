@@ -22,11 +22,18 @@
 # !!! Help: http://bit.ly/2hYLBDC
 # default = 0 = none
 #
-APP_LIBS_LIST = 0
+ ADAFRUIT : common = Bluefruit52Lib FileSystem
+# ARDUINO : common = Bridge Esplora Ethernet Firmata GSM 
+#	LiquidCrystal RobotIRremote Robot_Control Robot_Motor SD Servo 
+#	SpacebrewYun Stepper TFT Temboo WiFi 
+#
+APP_LIBS_LIST = ADAFRUIT
 
 # List user's libraries here
 # !!! Help: http://bit.ly/2AEscDx
 # default = 0 = none
+#
+# USER = Adafruit_Circuit_Playground 
 #
 USER_LIBS_LIST = 0
 
@@ -41,7 +48,7 @@ LOCAL_LIBS_LIST =
 # For example, WiFi may crash on Arduino 1.0.2, Esplora on Arduino 1.0.3, Firmata on Teensy 3.0,
 #   OneWire on MPIDE 0023, HardwareSerial may conflict with MarlinSerial
 #
-#EXCLUDE_LIBS = Firmata WiFi Esplora OneWire Robot_Control Robot_Control/utility Robot_Motor
+EXCLUDE_LIBS = Firmata WiFi Esplora OneWire Robot_Control Robot_Control/utility Robot_Motor
 
 
 # Warning options
@@ -139,7 +146,7 @@ NO_SERIAL_CONSOLE = false
 # !!! Help: http://bit.ly/2AUEcgp
 # Uncomment and specify another speed
 #
-#SERIAL_BAUDRATE = 115200
+SERIAL_BAUDRATE = 115200
 
 # OPTIMISATION for the optimisation and debugger levels
 # !!! Help: http://bit.ly/2kheSLz
@@ -195,3 +202,4 @@ BUILDS_PATH       := $(BUILT_PRODUCTS_DIR)
 BUILDS_PATH_SPACE := $(BUILDS_PATH)
 
 include $(MAKEFILE_PATH)/Step1.mk
+
