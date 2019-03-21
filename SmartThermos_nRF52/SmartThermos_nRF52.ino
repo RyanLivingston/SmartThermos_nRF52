@@ -74,9 +74,12 @@
 #endif // end IDE
 
 #include <bluefruit.h>
+#include <Bluefruit_FileIO.h>
 #include "ThermosService.h"
 
 // Macros
+#define BLE_CONFIG_FILENAME     "/config.txt"
+
 #define INIT_SET_TEMP_VALUE     125
 #define INIT_OP_STATE_VALUE     0
 
@@ -86,16 +89,20 @@ void op_state_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len
 void connect_callback(uint16_t conn_handle);
 void disconnect_callback(uint16_t conn_handle, uint8_t reason);
 void startAdv(void);
+void fetchConfigData(uint8_t* set_temp_config, uint8_t* op_state_config);
+void writeConfigData(uint8_t set_temp_config, uint8_t op_state_config);
 
 // Global Variables
 ThermosService bleThermos;
-int setTemp;
-bool opState;
-
+uint8_t setTemp;
+uint8_t opState;
+File bleConfigFile(InternalFS);
 
 void setup() {
     
     Serial.begin(115200);
+    
+    delay(7500);
     
     Bluefruit.autoConnLed(true);
     Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
@@ -111,6 +118,11 @@ void setup() {
     bleThermos.setWriteCallback(SET_TEMP, set_temp_write_callback);
     bleThermos.begin();
     
+    fetchConfigData(&setTemp, &opState);
+    
+    bleThermos.write(SET_TEMP, setTemp);
+    bleThermos.write(OP_STATE, opState);
+    
     startAdv();
     
 }
@@ -122,22 +134,65 @@ void loop() {
     
 }
 
+void fetchConfigData(uint8_t* set_temp_config, uint8_t* op_state_config) {
+    InternalFS.begin();
+    
+    bleConfigFile.open(BLE_CONFIG_FILENAME, FILE_READ);
+    if(bleConfigFile) {
+        Serial.println("Reading Config File...");
+        
+        bleConfigFile.read(set_temp_config, sizeof(uint8_t));
+        bleConfigFile.read(op_state_config, sizeof(uint8_t));
+        
+        Serial.print("Saved Set Temp: ");
+        Serial.println(*set_temp_config);
+        Serial.print("Saved Operation State: ");
+        Serial.println(*op_state_config);
+        
+//      InternalFS.format(true);
+    }
+    else {
+        Serial.println("Created Config File!");
+        bleConfigFile.open(BLE_CONFIG_FILENAME, FILE_WRITE);
+        bleConfigFile.write(INIT_SET_TEMP_VALUE);
+        bleConfigFile.write((uint8_t)INIT_OP_STATE_VALUE);
+        *set_temp_config = INIT_SET_TEMP_VALUE;
+        *op_state_config = INIT_OP_STATE_VALUE;
+    }
+    
+    bleConfigFile.close();
+    bleConfigFile.open(BLE_CONFIG_FILENAME, FILE_WRITE);
+}
+
+void writeConfigData(uint8_t set_temp_config, uint8_t op_state_config) {
+    
+    bleConfigFile.open(BLE_CONFIG_FILENAME, FILE_WRITE);
+    if(bleConfigFile) {
+        bleConfigFile.seek(0);
+        bleConfigFile.write(set_temp_config);
+        bleConfigFile.write(op_state_config);
+    }
+    bleConfigFile.close();
+}
+
 void set_temp_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset) {
-    setTemp = int(*data);
+    setTemp = *data;
+    writeConfigData(setTemp, opState);
     
     Serial.print("Set Temp: ");
     Serial.println(setTemp);
 }
 
 void op_state_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset) {
-    opState = int(*data);
+    opState = *data;
+    writeConfigData(setTemp, opState);
     
     Serial.print("Operational State: ");
     Serial.println(opState);
 }
 
 void connect_callback(uint16_t conn_handle) {
-    Serial.println("Connected");
+    Serial.println("\nConnected");
 }
 
 void disconnect_callback(uint16_t conn_handle, uint8_t reason)
