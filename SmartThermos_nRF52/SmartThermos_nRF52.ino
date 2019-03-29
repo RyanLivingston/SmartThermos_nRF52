@@ -83,6 +83,16 @@
 #define INIT_SET_TEMP_VALUE     125
 #define INIT_OP_STATE_VALUE     0
 
+#define TEMP_SENSOR_PIN         A0
+#define VBAT_PIN                A7
+#define TIMER_VBAT              30000
+#define TIMER_TEMP_SENSOR       5000
+
+// Constants
+const float ADC_MV_PER_LSB =   3000.0F / 4096.0F;
+const float VBAT_DIVIDER =      0.71275837;
+const float VBAT_DIVIDER_COMP = 1.403;
+
 // Prototypes
 void set_temp_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset);
 void op_state_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset);
@@ -91,46 +101,80 @@ void disconnect_callback(uint16_t conn_handle, uint8_t reason);
 void startAdv(void);
 void fetchConfigData(uint8_t* set_temp_config, uint8_t* op_state_config);
 void writeConfigData(uint8_t set_temp_config, uint8_t op_state_config);
+void notifyTimerCallback(TimerHandle_t xTimerID);
+uint8_t readVBAT(int * vbat_mv = nullptr);
+uint8_t readTempSensor(void);
+
+void println(const __FlashStringHelper * str);
+void print(const __FlashStringHelper * str);
+void print(uint32_t str);
+void println(uint32_t str);
 
 // Global Variables
+SoftwareTimer notifyBatteryTimer;
+SoftwareTimer notifyTempSensorTimer;
+TimerHandle_t batteryTimerHandle;
+TimerHandle_t tempSensorTimerHandle;
+
 ThermosService bleThermos;
+
 uint8_t setTemp;
 uint8_t opState;
+volatile uint8_t actualTemp;
+
 File bleConfigFile(InternalFS);
 
 void setup() {
     
+    // Begin serial at 115200 baudrate
     Serial.begin(115200);
     
+    // Delay setup
     delay(7500);
     
-    Bluefruit.autoConnLed(true);
+    // Set bandwidth and begin BLE stack
     Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
     Bluefruit.begin();
     
+    // Set Tx power and name
     Bluefruit.setTxPower(4);
     Bluefruit.setName("Smart Thermos");
     
+    // Set connection callbacks
     Bluefruit.setConnectCallback(connect_callback);
     Bluefruit.setDisconnectCallback(disconnect_callback);
     
+    // Set thermos service callbacks and being service
     bleThermos.setWriteCallback(OP_STATE, op_state_write_callback);
     bleThermos.setWriteCallback(SET_TEMP, set_temp_write_callback);
     bleThermos.begin();
     
+    // Fetch saved config data from FS
     fetchConfigData(&setTemp, &opState);
     
+    // Write saved config to BLE characteristics
     bleThermos.write(SET_TEMP, setTemp);
     bleThermos.write(OP_STATE, opState);
     
+    // Configure BLE advertising
     startAdv();
+    
+    analogReference(AR_INTERNAL_3_0);
+    analogReadResolution(12);
+    
+    // Begin timed callback for writing battery characterisitc
+    notifyBatteryTimer.begin(TIMER_VBAT, notifyTimerCallback);
+    notifyTempSensorTimer.begin(TIMER_TEMP_SENSOR, notifyTimerCallback);
+    
+    batteryTimerHandle = notifyBatteryTimer.getHandle();
+    tempSensorTimerHandle = notifyTempSensorTimer.getHandle();
     
 }
 
 void loop() {
     
-    
-    
+    actualTemp = readTempSensor();
+    delay(500);
     
 }
 
@@ -139,20 +183,20 @@ void fetchConfigData(uint8_t* set_temp_config, uint8_t* op_state_config) {
     
     bleConfigFile.open(BLE_CONFIG_FILENAME, FILE_READ);
     if(bleConfigFile) {
-        Serial.println("Reading Config File...");
+        println(F("Reading Config File..."));
         
         bleConfigFile.read(set_temp_config, sizeof(uint8_t));
         bleConfigFile.read(op_state_config, sizeof(uint8_t));
         
-        Serial.print("Saved Set Temp: ");
-        Serial.println(*set_temp_config);
-        Serial.print("Saved Operation State: ");
-        Serial.println(*op_state_config);
+        print(F("Saved Set Temp: "));
+        println(*set_temp_config);
+        print(F("Saved Operation State: "));
+        println(*op_state_config);
         
 //      InternalFS.format(true);
     }
     else {
-        Serial.println("Created Config File!");
+        println(F("Created Config File!"));
         bleConfigFile.open(BLE_CONFIG_FILENAME, FILE_WRITE);
         bleConfigFile.write(INIT_SET_TEMP_VALUE);
         bleConfigFile.write((uint8_t)INIT_OP_STATE_VALUE);
@@ -161,7 +205,6 @@ void fetchConfigData(uint8_t* set_temp_config, uint8_t* op_state_config) {
     }
     
     bleConfigFile.close();
-    bleConfigFile.open(BLE_CONFIG_FILENAME, FILE_WRITE);
 }
 
 void writeConfigData(uint8_t set_temp_config, uint8_t op_state_config) {
@@ -175,24 +218,56 @@ void writeConfigData(uint8_t set_temp_config, uint8_t op_state_config) {
     bleConfigFile.close();
 }
 
+void notifyTimerCallback(TimerHandle_t xTimerID) {
+    
+    if(xTimerID == batteryTimerHandle) {
+        int vbat_mv;
+        uint8_t vbatPercent = readVBAT(&vbat_mv);
+        
+        print(F("Update vBat: "));
+        print(vbatPercent);
+        print(F("% ("));
+        print(vbat_mv);
+        println(F("mV)"));
+        
+        if(Bluefruit.connected())
+            bleThermos.notify(BATTERY_LEVEL, vbatPercent);
+    }
+    else if (xTimerID == tempSensorTimerHandle) {
+        print(F("Update temp: "));
+        print(actualTemp);
+        println(F("F"));
+        
+        if(Bluefruit.connected())
+            bleThermos.notify(ACTUAL_TEMP, actualTemp);
+    }
+}
+
 void set_temp_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset) {
     setTemp = *data;
     writeConfigData(setTemp, opState);
     
-    Serial.print("Set Temp: ");
-    Serial.println(setTemp);
+    print(F("Set Temp: "));
+    println(setTemp);
 }
 
 void op_state_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset) {
     opState = *data;
     writeConfigData(setTemp, opState);
     
-    Serial.print("Operational State: ");
-    Serial.println(opState);
+    print(F("Operational State: "));
+    println(opState);
 }
 
 void connect_callback(uint16_t conn_handle) {
-    Serial.println("\nConnected");
+    println(F("\nConnected"));
+    
+    notifyBatteryTimer.start();
+    notifyTempSensorTimer.start();
+    
+    delay(2000);
+    bleThermos.notify(BATTERY_LEVEL, readVBAT());
+    bleThermos.notify(ACTUAL_TEMP, actualTemp);
 }
 
 void disconnect_callback(uint16_t conn_handle, uint8_t reason)
@@ -200,8 +275,10 @@ void disconnect_callback(uint16_t conn_handle, uint8_t reason)
     (void) conn_handle;
     (void) reason;
     
-    Serial.println();
-    Serial.println("Disconnected");
+    println(F("\nDisconnected"));
+    
+    notifyBatteryTimer.stop();
+    notifyTempSensorTimer.stop();
 }
 
 void startAdv(void)
@@ -210,7 +287,55 @@ void startAdv(void)
     Bluefruit.Advertising.addTxPower();
     Bluefruit.Advertising.addService(bleThermos);
     Bluefruit.Advertising.restartOnDisconnect(true);
-    Bluefruit.Advertising.setInterval(32, 244);    // in unit of 0.625 ms
-    Bluefruit.Advertising.setFastTimeout(30);      // number of seconds in fast mode
+    Bluefruit.Advertising.setInterval(32, 244);
+    Bluefruit.Advertising.setFastTimeout(30);
     Bluefruit.Advertising.start(0);
+}
+
+uint8_t readVBAT(int * vbat_mv) {
+    int vbat;
+    int* vbatPtr = &vbat;
+    uint8_t vbatPercent;
+    
+    if(vbat_mv != nullptr)
+        vbatPtr = vbat_mv;
+    
+    *vbatPtr = analogRead(VBAT_PIN) * VBAT_DIVIDER_COMP * ADC_MV_PER_LSB;
+    
+    if(*vbatPtr > 4100)
+        vbatPercent = 100;
+    else if (*vbatPtr > 4000)
+        vbatPercent = 90;
+    else if (*vbatPtr > 3750)
+        vbatPercent = 50;
+    else
+        vbatPercent = 10;
+    
+    return vbatPercent;
+}
+
+uint8_t readTempSensor(void) {
+    int temp_mv;
+    int temp_C;
+    int temp_F;
+    
+    temp_mv = analogRead(TEMP_SENSOR_PIN) * ADC_MV_PER_LSB;
+    temp_C = (temp_mv - 500) / 10;
+    temp_F = (temp_C * (9/5)) + 32;
+    
+    return temp_F;
+}
+
+void print(const __FlashStringHelper * str){
+    Serial.print(str);
+}
+void print(uint32_t str){
+    Serial.print(str);
+}
+
+void println(const __FlashStringHelper * str){
+    Serial.println(str);
+}
+void println(uint32_t str){
+    Serial.println(str);
 }
