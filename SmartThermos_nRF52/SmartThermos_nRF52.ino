@@ -83,6 +83,7 @@
 #define INIT_SET_TEMP_VALUE     125
 #define INIT_OP_STATE_VALUE     0
 
+#define MOSFET_PIN              07
 #define TEMP_SENSOR_PIN         A0
 #define VBAT_PIN                A7
 #define TIMER_VBAT              30000
@@ -119,7 +120,8 @@ TimerHandle_t tempSensorTimerHandle;
 ThermosService bleThermos;
 
 uint8_t setTemp;
-uint8_t opState;
+uint8_t opState = 0;
+bool opStatus = false;
 volatile uint8_t actualTemp;
 
 File bleConfigFile(InternalFS);
@@ -169,13 +171,39 @@ void setup() {
     batteryTimerHandle = notifyBatteryTimer.getHandle();
     tempSensorTimerHandle = notifyTempSensorTimer.getHandle();
     
+    pinMode(MOSFET_PIN, OUTPUT);
+    digitalWrite(MOSFET_PIN, LOW);
+    
 }
 
 void loop() {
     
     actualTemp = readTempSensor();
-    delay(500);
     
+    if(opState) {
+
+        if(!opStatus && actualTemp < (setTemp - 3)) {
+            
+            opStatus = true;
+            digitalWrite(MOSFET_PIN, opStatus);
+            ledOn(LED_RED);
+            bleThermos.notify(OP_STATUS, opStatus);
+        }
+        if(opStatus && actualTemp > (setTemp + 3)) {
+            
+            opStatus = false;
+            digitalWrite(MOSFET_PIN, opStatus);
+            ledOff(LED_RED);
+            bleThermos.notify(OP_STATUS, opStatus);
+        }
+    }
+    else{
+        opStatus = false;
+        digitalWrite(MOSFET_PIN, opStatus);
+        ledOff(LED_RED);
+    }
+    
+    delay(250);
 }
 
 void fetchConfigData(uint8_t* set_temp_config, uint8_t* op_state_config) {
