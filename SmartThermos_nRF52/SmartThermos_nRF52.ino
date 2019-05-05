@@ -180,11 +180,13 @@ void loop() {
     
     digitalWrite(MOSFET_PIN, 1);
     ledOn(LED_RED);
+    bleThermos.notify(OP_STATUS, 1);
     
     delay(2000);
     
     digitalWrite(MOSFET_PIN, 0);
     ledOff(LED_RED);
+    bleThermos.notify(OP_STATUS, 0);
     
     delay(2000);
     
