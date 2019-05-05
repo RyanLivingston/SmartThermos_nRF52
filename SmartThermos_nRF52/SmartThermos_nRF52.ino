@@ -181,20 +181,20 @@ void loop() {
     actualTemp = readTempSensor();
     
     if(opState) {
+        
+        bleThermos.notify(OP_STATUS, opStatus);
 
-        if(!opStatus && actualTemp < (setTemp - 3)) {
+        if(!opStatus && actualTemp < (setTemp - 2)) {
             
             opStatus = true;
             digitalWrite(MOSFET_PIN, opStatus);
             ledOn(LED_RED);
-            bleThermos.notify(OP_STATUS, opStatus);
         }
-        if(opStatus && actualTemp > (setTemp + 3)) {
+        if(opStatus && actualTemp > (setTemp + 2)) {
             
             opStatus = false;
             digitalWrite(MOSFET_PIN, opStatus);
             ledOff(LED_RED);
-            bleThermos.notify(OP_STATUS, opStatus);
         }
     }
     else{
@@ -343,15 +343,18 @@ uint8_t readVBAT(int * vbat_mv) {
 }
 
 uint8_t readTempSensor(void) {
-    int temp_mv;
-    int temp_C;
-    int temp_F;
+    float temp_mv;
+    float temp_C;
+    float temp_F;
     
     temp_mv = analogRead(TEMP_SENSOR_PIN) * ADC_MV_PER_LSB;
     temp_C = (temp_mv - 500) / 10;
     temp_F = (temp_C * (9/5)) + 32;
     
-    return temp_F;
+    if(temp_F > 65)
+        return 68 + ((temp_F - 68) * 4.5);
+    else
+        return 65;
 }
 
 void print(const __FlashStringHelper * str){
