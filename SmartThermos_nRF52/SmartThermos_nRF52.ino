@@ -178,32 +178,16 @@ void setup() {
 
 void loop() {
     
-    actualTemp = readTempSensor();
+    digitalWrite(MOSFET_PIN, 1);
+    ledOn(LED_RED);
     
-    if(opState) {
-
-        if(!opStatus && actualTemp < (setTemp - 3)) {
-            
-            opStatus = true;
-            digitalWrite(MOSFET_PIN, opStatus);
-            ledOn(LED_RED);
-            bleThermos.notify(OP_STATUS, opStatus);
-        }
-        if(opStatus && actualTemp > (setTemp + 3)) {
-            
-            opStatus = false;
-            digitalWrite(MOSFET_PIN, opStatus);
-            ledOff(LED_RED);
-            bleThermos.notify(OP_STATUS, opStatus);
-        }
-    }
-    else{
-        opStatus = false;
-        digitalWrite(MOSFET_PIN, opStatus);
-        ledOff(LED_RED);
-    }
+    delay(2000);
     
-    delay(250);
+    digitalWrite(MOSFET_PIN, 0);
+    ledOff(LED_RED);
+    
+    delay(2000);
+    
 }
 
 void fetchConfigData(uint8_t* set_temp_config, uint8_t* op_state_config) {
