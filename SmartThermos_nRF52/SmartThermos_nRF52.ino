@@ -18,26 +18,6 @@
 ///
 
 
-///
-/// @file		SmartThermos_nRF52.ino
-/// @brief		Main sketch
-///
-/// @details	<#details#>
-/// @n @a		Developed with [embedXcode+](https://embedXcode.weebly.com)
-///
-/// @author		Ryan Livingston
-/// @author		Ryan Livingston
-/// @date		3/20/19 12:41 PM
-/// @version	<#version#>
-///
-/// @copyright	(c) Ryan Livingston, 2019
-/// @copyright	CC = BY SA NC
-///
-/// @see		ReadMe.txt for references
-/// @n
-///
-
-
 // Core library for code-sense - IDE-based
 // !!! Help: http://bit.ly/2AdU7cu
 #if defined(WIRING) // Wiring specific
