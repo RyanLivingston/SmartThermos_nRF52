@@ -120,12 +120,13 @@ TimerHandle_t tempSensorTimerHandle;
 ThermosService bleThermos;
 
 uint8_t setTemp;
-uint8_t opState = 0;
-bool opStatus = false;
+uint8_t opState = 0;   // 0 = standby, 1 = ready to heat (enabled)
+bool opStatus = false; // 0 = not heating, 1 = HEATING
 volatile uint8_t actualTemp;
 
 File bleConfigFile(InternalFS);
 
+// Initally called upon boot
 void setup() {
     
     // Begin serial at 115200 baudrate
@@ -161,35 +162,45 @@ void setup() {
     // Configure BLE advertising
     startAdv();
     
+    // Set ADC parameters
     analogReference(AR_INTERNAL_3_0);
     analogReadResolution(12);
     
-    // Begin timed callback for writing battery characterisitc
+    // Begin timer callbacks for writing battery & actual temp characterisitcs
     notifyBatteryTimer.begin(TIMER_VBAT, notifyTimerCallback);
     notifyTempSensorTimer.begin(TIMER_TEMP_SENSOR, notifyTimerCallback);
     
+    // Get handles for timers
     batteryTimerHandle = notifyBatteryTimer.getHandle();
     tempSensorTimerHandle = notifyTempSensorTimer.getHandle();
     
+    // Set MOSFET pin to output and to LOW
     pinMode(MOSFET_PIN, OUTPUT);
     digitalWrite(MOSFET_PIN, LOW);
     
 }
 
+// Main executed loop
 void loop() {
     
+    // Get the actual temperature
     actualTemp = readTempSensor();
     
+    // Test if operation state is enabled
     if(opState) {
         
+        // Update the Op Status BLE characteristic and notify the iOS app
         bleThermos.notify(OP_STATUS, opStatus);
-
+        
+        // If the temp drops below the set temp then enable the heater
+        // Two degree offset is used against the set temp
         if(!opStatus && actualTemp < (setTemp - 2)) {
             
             opStatus = true;
             digitalWrite(MOSFET_PIN, opStatus);
             ledOn(LED_RED);
         }
+        // If the temp drops below the set temp then enable the heater
         if(opStatus && actualTemp > (setTemp + 2)) {
             
             opStatus = false;
@@ -197,22 +208,30 @@ void loop() {
             ledOff(LED_RED);
         }
     }
+    // If 0 or disabled, then disable the heater
     else{
         opStatus = false;
         digitalWrite(MOSFET_PIN, opStatus);
         ledOff(LED_RED);
     }
     
+    // Delay for 250 ms
     delay(250);
 }
 
+// Grab last saved data from config file
 void fetchConfigData(uint8_t* set_temp_config, uint8_t* op_state_config) {
+    
+    // Initialize file system
     InternalFS.begin();
     
+    // Open the config file to read
     bleConfigFile.open(BLE_CONFIG_FILENAME, FILE_READ);
     if(bleConfigFile) {
         println(F("Reading Config File..."));
         
+        // Read the saved Set Temp and Op State values
+        // Pass the values to the arguements
         bleConfigFile.read(set_temp_config, sizeof(uint8_t));
         bleConfigFile.read(op_state_config, sizeof(uint8_t));
         
@@ -222,6 +241,8 @@ void fetchConfigData(uint8_t* set_temp_config, uint8_t* op_state_config) {
         println(*op_state_config);
         
 //      InternalFS.format(true);
+        
+        // If file is not found, create one with default values
     }
     else {
         println(F("Created Config File!"));
@@ -232,23 +253,34 @@ void fetchConfigData(uint8_t* set_temp_config, uint8_t* op_state_config) {
         *op_state_config = INIT_OP_STATE_VALUE;
     }
     
+    // Close the file
     bleConfigFile.close();
 }
 
+// Overwrite config file with values
 void writeConfigData(uint8_t set_temp_config, uint8_t op_state_config) {
     
+    // Open the config file to write
     bleConfigFile.open(BLE_CONFIG_FILENAME, FILE_WRITE);
     if(bleConfigFile) {
+        
+        // Write values
         bleConfigFile.seek(0);
         bleConfigFile.write(set_temp_config);
         bleConfigFile.write(op_state_config);
     }
+    
+    // Close the file
     bleConfigFile.close();
 }
 
+// Callback for the timers
 void notifyTimerCallback(TimerHandle_t xTimerID) {
     
+    // Test which timer was triggered
     if(xTimerID == batteryTimerHandle) {
+        
+        // Read the battery ADC
         int vbat_mv;
         uint8_t vbatPercent = readVBAT(&vbat_mv);
         
@@ -258,20 +290,27 @@ void notifyTimerCallback(TimerHandle_t xTimerID) {
         print(vbat_mv);
         println(F("mV)"));
         
+        // Write to the battery characterisitc and notify the iOS app
         if(Bluefruit.connected())
             bleThermos.notify(BATTERY_LEVEL, vbatPercent);
     }
     else if (xTimerID == tempSensorTimerHandle) {
+        
+        // Send an updated Actual Temp
         print(F("Update temp: "));
         print(actualTemp);
         println(F("F"));
         
+        // Write to the Actual Temp characterisitc and notify the iOS app
         if(Bluefruit.connected())
             bleThermos.notify(ACTUAL_TEMP, actualTemp);
     }
 }
 
+// Called when the Set Temp characteristic is updated
 void set_temp_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset) {
+    
+    // Update the Set Temp and save the value to the config file
     setTemp = *data;
     writeConfigData(setTemp, opState);
     
@@ -279,7 +318,10 @@ void set_temp_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len
     println(setTemp);
 }
 
+// Called when the Op State characteristic is updated
 void op_state_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset) {
+    
+    // Update the Op State and save the value to the config file
     opState = *data;
     writeConfigData(setTemp, opState);
     
@@ -287,17 +329,21 @@ void op_state_write_callback(BLECharacteristic& chr, uint8_t* data, uint16_t len
     println(opState);
 }
 
+// Called when a BLE central device is connected
 void connect_callback(uint16_t conn_handle) {
     println(F("\nConnected"));
     
+    // Begin timers
     notifyBatteryTimer.start();
     notifyTempSensorTimer.start();
     
+    // Wait two seconds
     delay(2000);
     bleThermos.notify(BATTERY_LEVEL, readVBAT());
     bleThermos.notify(ACTUAL_TEMP, actualTemp);
 }
 
+// Called when a BLE central device is disconnected
 void disconnect_callback(uint16_t conn_handle, uint8_t reason)
 {
     (void) conn_handle;
@@ -305,10 +351,12 @@ void disconnect_callback(uint16_t conn_handle, uint8_t reason)
     
     println(F("\nDisconnected"));
     
+    // Stop timers
     notifyBatteryTimer.stop();
     notifyTempSensorTimer.stop();
 }
 
+// Begin BLE advertising
 void startAdv(void)
 {
     Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
@@ -320,6 +368,7 @@ void startAdv(void)
     Bluefruit.Advertising.start(0);
 }
 
+// Read the Battery analog pin
 uint8_t readVBAT(int * vbat_mv) {
     int vbat;
     int* vbatPtr = &vbat;
@@ -328,8 +377,10 @@ uint8_t readVBAT(int * vbat_mv) {
     if(vbat_mv != nullptr)
         vbatPtr = vbat_mv;
     
+    // Adjust the reading for internal voltage divider and convert to mV
     *vbatPtr = analogRead(VBAT_PIN) * VBAT_DIVIDER_COMP * ADC_MV_PER_LSB;
     
+    // Convert mV to an estimated percentage
     if(*vbatPtr > 4100)
         vbatPercent = 100;
     else if (*vbatPtr > 4000)
@@ -342,21 +393,27 @@ uint8_t readVBAT(int * vbat_mv) {
     return vbatPercent;
 }
 
+// Read the Temp Sensor analog pin
 uint8_t readTempSensor(void) {
     float temp_mv;
     float temp_C;
     float temp_F;
     
+    // Read analog pin and convert to mV
     temp_mv = analogRead(TEMP_SENSOR_PIN) * ADC_MV_PER_LSB;
+    
+    // Convert mV to C and F
     temp_C = (temp_mv - 500) / 10;
     temp_F = (temp_C * (9/5)) + 32;
     
+    // Estimate the internal water temp
     if(temp_F > 65)
         return 68 + ((temp_F - 68) * 4.5);
     else
         return 65;
 }
 
+// Serial print helper functions
 void print(const __FlashStringHelper * str){
     Serial.print(str);
 }
