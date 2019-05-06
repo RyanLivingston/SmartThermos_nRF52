@@ -6,6 +6,19 @@
 #include "BLECharacteristic.h"
 #include "BLEService.h"
 
+/*
+    Custom BLE Thermos Service
+    UUID: 0x1234
+ 
+    Characteristics:
+         SET_TEMP       Read & Write
+         ACTUAL_TEMP    Notify
+         BATTERY_LEVEL  Notify
+         OP_STATUS      Notify
+         OP_STATE       Read & Write
+ 
+ */
+
 //#define UUID_SVC_THERMOS        0x1234
 //#define UUID_CHR_SET_TEMP       0x2001
 //#define UUID_CHR_ACTUAL_TEMP    0x2002
@@ -37,9 +50,11 @@ public:
 
   virtual err_t begin(void);
 
+  // Read and Notify characteristic methods
   bool write(Characteristics ch, uint8_t data);
   bool notify(Characteristics ch, uint8_t data);
 
+  // Method to set a callback to be triggered by the updated characteristic
   void setWriteCallback(Characteristics ch, BLECharacteristic::write_cb_t fp);
 
 };

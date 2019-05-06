@@ -1,6 +1,7 @@
 
 #include "ThermosService.h"
 
+// Constructor calls the constructors of the parent class and characteristics
 ThermosService::ThermosService(void) : BLEService(BLEUuid(0x1234)), 
   Set_Temp(BLEUuid(0x2001)),
   Actual_Temp(BLEUuid(0x2002)),
@@ -10,11 +11,13 @@ ThermosService::ThermosService(void) : BLEService(BLEUuid(0x1234)),
 {
 }
 
+// Initialize the service
 err_t ThermosService::begin(void) {
   VERIFY_STATUS( BLEService::begin() );
 
   Serial.println("Starting Thermos Service");
   
+  // Set the properties of each characteristic
   Set_Temp.setProperties(CHR_PROPS_READ | CHR_PROPS_WRITE_WO_RESP);
   Set_Temp.setPermission(SECMODE_OPEN, SECMODE_OPEN);
   Set_Temp.setFixedLen(1);
@@ -44,6 +47,7 @@ err_t ThermosService::begin(void) {
   return ERROR_NONE;
 }
 
+// Write data to a valid characteristic
 bool ThermosService::write(Characteristics ch, uint8_t data) {
   switch (ch) {
     case SET_TEMP:
@@ -54,7 +58,7 @@ bool ThermosService::write(Characteristics ch, uint8_t data) {
       return false;
   }
 }
-
+// Write notification data to a valid characteristic
 bool ThermosService::notify(Characteristics ch, uint8_t data) {
   switch (ch) {
     case ACTUAL_TEMP:
@@ -68,6 +72,7 @@ bool ThermosService::notify(Characteristics ch, uint8_t data) {
   }
 }
 
+// Register a callback function to a characteristic
   void ThermosService::setWriteCallback(Characteristics ch, BLECharacteristic::write_cb_t fp) {
     switch (ch) {
     case SET_TEMP:
